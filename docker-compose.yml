@@ -1,0 +1,26 @@
+services:
+  controle-financeiro:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - JWT_SECRET=sua-senha-super-secreta-aqui-mude-isso
+      - DATA_DIR=/app/data
+    volumes:
+      - ./data:/app/data
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.controle.rule=Host(`controle.fabiorvs.dev.br`)"
+      - "traefik.http.routers.controle.entrypoints=websecure"
+      - "traefik.http.routers.controle.tls=true"
+      - "traefik.http.routers.controle.tls.certresolver=letsencrypt"
+      - "traefik.http.services.controle.loadbalancer.server.port=3000"
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
