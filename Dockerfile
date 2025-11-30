@@ -5,7 +5,7 @@ FROM node:23-alpine
 LABEL maintainer="fabiorvs"
 LABEL description="Controle Financeiro com Node.js e SQLite"
 
-# Instalar apenas dependências necessárias para better-sqlite3
+# Instalar dependências necessárias para better-sqlite3
 RUN apk add --no-cache \
     python3 \
     make \
@@ -19,25 +19,23 @@ RUN addgroup -g 1001 -S nodejs && \
 # Criar diretório da aplicação
 WORKDIR /app
 
-# Mudar propriedade do diretório
-RUN chown -R nodejs:nodejs /app
+# Copiar arquivos de dependências como root primeiro
+COPY package*.json ./
 
-# Copiar arquivos de dependências como usuário nodejs
-COPY --chown=nodejs:nodejs package*.json ./
-
-# Mudar para usuário não-root
-USER nodejs
-
-# Instalar dependências
-RUN npm ci --only=production --ignore-scripts && \
+# Instalar dependências como root (necessário para compilar better-sqlite3)
+RUN npm ci --only=production && \
     npm cache clean --force
 
 # Copiar código da aplicação
-COPY --chown=nodejs:nodejs server.js ./
-COPY --chown=nodejs:nodejs public ./public
+COPY server.js ./
+COPY public ./public
 
-# Criar diretório para o banco de dados
-RUN mkdir -p /app/data
+# Criar diretório para o banco de dados e ajustar permissões
+RUN mkdir -p /app/data && \
+    chown -R nodejs:nodejs /app
+
+# Mudar para usuário não-root
+USER nodejs
 
 # Expor porta
 EXPOSE 3000
