@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle Financeiro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .login-card {
+            max-width: 400px;
+            margin: 100px auto;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        h2 {
+            color: #555;
+            margin-bottom: 16px;
+            font-size: 20px;
+        }
+
+        .balance {
+            font-size: 48px;
+            font-weight: bold;
+            color: #667eea;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .balance.negative {
+            color: #e74c3c;
+        }
+
+        .balance.positive {
+            color: #27ae60;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        button.logout,
+        button.delete {
+            background: #e74c3c;
+        }
+
+        button.logout:hover,
+        button.delete:hover {
+            background: #c0392b;
+        }
+
+        button.secondary {
+            background: #95a5a6;
+            margin-top: 12px;
+        }
+
+        button.secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .transaction-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .transaction-item {
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .transaction-item:last-child {
+            border-bottom: none;
+        }
+
+        .transaction-info {
+            flex: 1;
+        }
+
+        .transaction-date {
+            color: #999;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .transaction-comment {
+            color: #666;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .transaction-amount {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0 12px;
+        }
+
+        .transaction-amount.income {
+            color: #27ae60;
+        }
+
+        .transaction-amount.expense {
+            color: #e74c3c;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .stat-value.income {
+            color: #27ae60;
+        }
+
+        .stat-value.expense {
+            color: #e74c3c;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .error {
+            background: #ffe6e6;
+            color: #c0392b;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .btn-small {
+            width: auto;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .btn-delete {
+            width: auto;
+            padding: 6px 12px;
+            font-size: 12px;
+            background: #e74c3c;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            .card {
+                padding: 16px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .balance {
+                font-size: 36px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app"></div>
+
+    <script>
+        const API_URL = window.location.origin + '/api';
+        let token = localStorage.getItem('token');
+
+        // Funções de API
+        async function apiCall(endpoint, options = {}) {
+            const response = await fetch(API_URL + endpoint, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token && { 'Authorization': `Bearer ${token}` }),
+                    ...options.headers
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro na requisição');
+            }
+
+            return response.json();
+        }
+
+        // Componente Login/Registro
+        function renderAuth() {
+            return `
+                <div class="card login-card">
+                    <h1>🔒 Controle Financeiro</h1>
+                    <div id="error"></div>
+                    <form onsubmit="handleLogin(event)">
+                        <input
+                            type="password"
+                            id="password"
+                            placeholder="Digite sua senha"
+                            required
+                            autofocus
+                        />
+                        <button type="submit">Entrar</button>
+                        <button type="button" class="secondary" onclick="showRegister()">
+                            Criar Nova Conta
+                        </button>
+                    </form>
+                </div>
+            `;
+        }
+
+        function renderRegister() {
+            return `
+                <div class="card login-card">
+                    <h1>✨ Criar Conta</h1>
+                    <div id="error"></div>
+                    <form onsubmit="handleRegister(event)">
+                        <input
+                            type="password"
+                            id="password"
+                            placeholder="Escolha uma senha"
+                            required
+                            autofocus
+                        />
+                        <input
+                            type="number"
+                            step="0.01"
+                            id="initialBalance"
+                            placeholder="Saldo inicial (opcional)"
+                        />
+                        <button type="submit">Criar Conta</button>
+                        <button type="button" class="secondary" onclick="render()">
+                            Voltar ao Login
+                        </button>
+                    </form>
+                </div>
+            `;
+        }
+
+        // Componente Principal
+        async function renderApp() {
+            try {
+                const [user, transactions] = await Promise.all([
+                    apiCall('/user'),
+                    apiCall('/transactions')
+                ]);
+
+                const stats = transactions.reduce((acc, t) => {
+                    if (t.type === 'income') acc.income += t.amount;
+                    else acc.expense += t.amount;
+                    return acc;
+                }, { income: 0, expense: 0 });
+
+                const balance = user.initialBalance + stats.income - stats.expense;
+
+                return `
+                    <div class="container">
+                        <div class="card">
+                            <h1>💰 Meu Controle Financeiro</h1>
+                            
+                            <div class="balance ${balance < 0 ? 'negative' : 'positive'}">
+                                R$ ${balance.toFixed(2)}
+                            </div>
+                            
+                            <button class="btn-small" onclick="setInitialBalance()">
+                                Definir Saldo Inicial
+                            </button>
+
+                            <div class="stats">
+                                <div class="stat-card">
+                                    <div class="stat-label">Total Receitas</div>
+                                    <div class="stat-value income">+ R$ ${stats.income.toFixed(2)}</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Total Despesas</div>
+                                    <div class="stat-value expense">- R$ ${stats.expense.toFixed(2)}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h2>➕ Nova Transação</h2>
+                            <form onsubmit="handleAddTransaction(event)">
+                                <div class="form-row">
+                                    <select id="type">
+                                        <option value="expense">Despesa</option>
+                                        <option value="income">Receita</option>
+                                    </select>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        id="amount"
+                                        placeholder="Valor"
+                                        required
+                                    />
+                                </div>
+                                <textarea
+                                    id="comment"
+                                    placeholder="Comentário (opcional)"
+                                    rows="2"
+                                ></textarea>
+                                <button type="submit">Adicionar</button>
+                            </form>
+                        </div>
+
+                        <div class="card">
+                            <h2>📋 Histórico de Transações</h2>
+                            <div class="transaction-list">
+                                ${transactions.length === 0 ? `
+                                    <div class="empty-state">
+                                        Nenhuma transação ainda.<br/>
+                                        Adicione sua primeira transação acima!
+                                    </div>
+                                ` : transactions.map(t => `
+                                    <div class="transaction-item">
+                                        <div class="transaction-info">
+                                            <div class="transaction-date">
+                                                ${new Date(t.date).toLocaleString('pt-BR')}
+                                            </div>
+                                            <div style="font-weight: 500; color: #333;">
+                                                ${t.type === 'income' ? '💵 Receita' : '💸 Despesa'}
+                                            </div>
+                                            ${t.comment ? `
+                                                <div class="transaction-comment">${t.comment}</div>
+                                            ` : ''}
+                                        </div>
+                                        <div class="transaction-amount ${t.type}">
+                                            ${t.type === 'income' ? '+' : '-'} R$ ${t.amount.toFixed(2)}
+                                        </div>
+                                        <button class="btn-delete" onclick="deleteTransaction('${t._id}')">
+                                            🗑️
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <button class="logout" onclick="handleLogout()">Sair</button>
+                    </div>
+                `;
+            } catch (error) {
+                return renderAuth();
+            }
+        }
+
+        // Handlers
+        async function handleLogin(e) {
+            e.preventDefault();
+            try {
+                const password = document.getElementById('password').value;
+                const data = await apiCall('/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ password })
+                });
+
+                token = data.token;
+                localStorage.setItem('token', token);
+                render();
+            } catch (error) {
+                document.getElementById('error').innerHTML =
+                    `<div class="error">${error.message}</div>`;
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            try {
+                const password = document.getElementById('password').value;
+                const initialBalance = parseFloat(document.getElementById('initialBalance').value) || 0;
+
+                const data = await apiCall('/register', {
+                    method: 'POST',
+                    body: JSON.stringify({ password, initialBalance })
+                });
+
+                token = data.token;
+                localStorage.setItem('token', token);
+                render();
+            } catch (error) {
+                document.getElementById('error').innerHTML =
+                    `<div class="error">${error.message}</div>`;
+            }
+        }
+
+        async function handleAddTransaction(e) {
+            e.preventDefault();
+            try {
+                const type = document.getElementById('type').value;
+                const amount = parseFloat(document.getElementById('amount').value);
+                const comment = document.getElementById('comment').value;
+
+                await apiCall('/transactions', {
+                    method: 'POST',
+                    body: JSON.stringify({ type, amount, comment })
+                });
+
+                render();
+            } catch (error) {
+                alert('Erro ao adicionar transação: ' + error.message);
+            }
+        }
+
+        async function deleteTransaction(id) {
+            if (!confirm('Deseja realmente deletar esta transação?')) return;
+
+            try {
+                await apiCall(`/transactions/${id}`, { method: 'DELETE' });
+                render();
+            } catch (error) {
+                alert('Erro ao deletar transação: ' + error.message);
+            }
+        }
+
+        async function setInitialBalance() {
+            const newBalance = prompt('Digite o saldo inicial:');
+            if (newBalance === null || isNaN(newBalance)) return;
+
+            try {
+                await apiCall('/user/balance', {
+                    method: 'PUT',
+                    body: JSON.stringify({ initialBalance: parseFloat(newBalance) })
+                });
+                render();
+            } catch (error) {
+                alert('Erro ao atualizar saldo: ' + error.message);
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('token');
+            token = null;
+            render();
+        }
+
+        function showRegister() {
+            document.getElementById('app').innerHTML = renderRegister();
+        }
+
+        // Render principal
+        async function render() {
+            const html = token ? await renderApp() : renderAuth();
+            document.getElementById('app').innerHTML = html;
+        }
+
+        render();
+    </script>
+</body>
+
+</html>
