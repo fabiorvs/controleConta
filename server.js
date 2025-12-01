@@ -181,13 +181,20 @@ app.get("/api/transactions", auth, (req, res) => {
       return res.json([]);
     }
 
-    const transactions = result[0].values.map((row) => ({
-      _id: row[0],
-      type: row[2],
-      amount: row[3],
-      comment: row[4],
-      date: row[5],
-    }));
+    const transactions = result[0].values.map((row) => {
+      // Força data atual do Brasil UTC-3
+      const dateBR = new Date().toLocaleString("sv-SE", {
+        timeZone: "America/Sao_Paulo",
+      });
+
+      return {
+        _id: row[0],
+        type: row[2],
+        amount: row[3],
+        comment: row[4],
+        date: dateBR, // Data já formatada em UTC-3
+      };
+    });
 
     res.json(transactions);
   } catch (error) {

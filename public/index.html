@@ -417,8 +417,8 @@
                                 ` : transactions.map(t => `
                                     <div class="transaction-item">
                                         <div class="transaction-info">
-                                            <div class="transaction-date">
-                                                ${new Date(t.date).toLocaleString('pt-BR')}
+                                           <div class="transaction-date">
+                                                ${t.date} 
                                             </div>
                                             <div style="font-weight: 500; color: #333;">
                                                 ${t.type === 'income' ? '💵 Receita' : '💸 Despesa'}
