@@ -4,23 +4,14 @@ FROM node:20-alpine
 LABEL maintainer="fabiorvs"
 LABEL description="Controle Financeiro com Node.js e SQLite"
 
-# Instalar dependências de build
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
-    sqlite \
-    && rm -rf /var/cache/apk/*
-
 # Criar diretório da aplicação
 WORKDIR /app
 
 # Copiar package.json
 COPY package*.json ./
 
-# Instalar dependências e forçar rebuild do better-sqlite3
-RUN npm install --build-from-source && \
-    npm rebuild better-sqlite3 && \
+# Instalar dependências (sql.js não precisa compilação)
+RUN npm ci --only=production && \
     npm cache clean --force
 
 # Copiar código da aplicação
