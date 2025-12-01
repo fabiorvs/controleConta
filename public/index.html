@@ -12,39 +12,79 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5568d3;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --danger-dark: #c0392b;
+            --warning: #f39c12;
+            --bg-gradient-start: #667eea;
+            --bg-gradient-end: #764ba2;
+            --text-dark: #333;
+            --text-light: #666;
+            --text-muted: #999;
+            --border: #e0e0e0;
+            --card-bg: #ffffff;
+            --card-secondary: #f8f9fa;
+        }
+
+        [data-theme="dark"] {
+            --primary: #7c8ff0;
+            --primary-dark: #667eea;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --danger-dark: #c0392b;
+            --warning: #f39c12;
+            --bg-gradient-start: #1a1a2e;
+            --bg-gradient-end: #16213e;
+            --text-dark: #e0e0e0;
+            --text-light: #b0b0b0;
+            --text-muted: #808080;
+            --border: #333;
+            --card-bg: #252540;
+            --card-secondary: #1e1e30;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
             min-height: 100vh;
             padding: 20px;
+            transition: background 0.3s ease;
         }
 
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
         }
 
         .card {
-            background: white;
+            background: var(--card-bg);
             border-radius: 12px;
             padding: 24px;
             margin-bottom: 20px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
         }
 
         .login-card {
-            max-width: 400px;
+            max-width: 450px;
             margin: 100px auto;
         }
 
         h1 {
-            color: #333;
+            color: var(--text-dark);
             margin-bottom: 20px;
             font-size: 28px;
         }
 
         h2 {
-            color: #555;
+            color: var(--text-dark);
             margin-bottom: 16px;
             font-size: 20px;
         }
@@ -52,17 +92,18 @@
         .balance {
             font-size: 48px;
             font-weight: bold;
-            color: #667eea;
+            color: var(--primary);
             text-align: center;
             margin: 20px 0;
+            animation: fadeIn 0.5s ease;
         }
 
         .balance.negative {
-            color: #e74c3c;
+            color: var(--danger);
         }
 
         .balance.positive {
-            color: #27ae60;
+            color: var(--success);
         }
 
         input,
@@ -71,49 +112,58 @@
             width: 100%;
             padding: 12px;
             margin-bottom: 12px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid var(--border);
             border-radius: 8px;
             font-size: 16px;
             transition: border-color 0.3s;
+            background: var(--card-bg);
+            color: var(--text-dark);
         }
 
         input:focus,
         textarea:focus,
         select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--primary);
         }
 
         button {
             width: 100%;
             padding: 14px;
-            background: #667eea;
+            background: var(--primary);
             color: white;
             border: none;
             border-radius: 8px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.3s;
         }
 
         button:hover {
-            background: #5568d3;
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
         }
 
         button:disabled {
             background: #ccc;
             cursor: not-allowed;
+            transform: none;
         }
 
         button.logout,
         button.delete {
-            background: #e74c3c;
+            background: var(--danger);
         }
 
         button.logout:hover,
         button.delete:hover {
-            background: #c0392b;
+            background: var(--danger-dark);
         }
 
         button.secondary {
@@ -125,17 +175,36 @@
             background: #7f8c8d;
         }
 
+        .btn-small {
+            width: auto;
+            padding: 8px 16px;
+            font-size: 14px;
+            display: inline-block;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+
+        .btn-icon {
+            padding: 8px 12px;
+        }
+
         .transaction-list {
-            max-height: 400px;
+            max-height: 500px;
             overflow-y: auto;
         }
 
         .transaction-item {
             padding: 16px;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: background 0.2s;
+            animation: slideIn 0.3s ease;
+        }
+
+        .transaction-item:hover {
+            background: var(--card-secondary);
         }
 
         .transaction-item:last-child {
@@ -147,13 +216,13 @@
         }
 
         .transaction-date {
-            color: #999;
+            color: var(--text-muted);
             font-size: 12px;
             margin-bottom: 4px;
         }
 
         .transaction-comment {
-            color: #666;
+            color: var(--text-light);
             font-size: 14px;
             margin-top: 4px;
         }
@@ -165,11 +234,125 @@
         }
 
         .transaction-amount.income {
-            color: #27ae60;
+            color: var(--success);
         }
 
         .transaction-amount.expense {
-            color: #e74c3c;
+            color: var(--danger);
+        }
+
+        .transaction-category {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .transaction-category {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        /* Despesas Básicas */
+        .category-alimentacao {
+            background: #ffeaa7;
+            color: #2d3436;
+        }
+
+        .category-transporte {
+            background: #74b9ff;
+            color: #2d3436;
+        }
+
+        .category-moradia {
+            background: #fab1a0;
+            color: #2d3436;
+        }
+
+        .category-saude {
+            background: #55efc4;
+            color: #2d3436;
+        }
+
+        .category-educacao {
+            background: #a29bfe;
+            color: #2d3436;
+        }
+
+        /* Lazer & Hobbys */
+        .category-lazer {
+            background: #fd79a8;
+            color: #2d3436;
+        }
+
+        .category-carrinhos {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .category-moedas {
+            background: #f39c12;
+            color: white;
+        }
+
+        .category-hobbys {
+            background: #e056fd;
+            color: white;
+        }
+
+        /* Receitas */
+        .category-salario {
+            background: #00b894;
+            color: white;
+        }
+
+        .category-investimento {
+            background: #0984e3;
+            color: white;
+        }
+
+        .category-venda {
+            background: #6c5ce7;
+            color: white;
+        }
+
+        .category-freelance {
+            background: #00cec9;
+            color: white;
+        }
+
+        /* Outros */
+        .category-compras {
+            background: #fdcb6e;
+            color: #2d3436;
+        }
+
+        .category-assinaturas {
+            background: #e17055;
+            color: white;
+        }
+
+        .category-presentes {
+            background: #ff7675;
+            color: white;
+        }
+
+        .category-animais {
+            background: #55efc4;
+            color: #2d3436;
+        }
+
+        .category-outros {
+            background: #636e72;
+            color: white;
         }
 
         .form-row {
@@ -186,15 +369,20 @@
         }
 
         .stat-card {
-            background: #f8f9fa;
+            background: var(--card-secondary);
             padding: 16px;
             border-radius: 8px;
             text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: scale(1.05);
         }
 
         .stat-label {
             font-size: 12px;
-            color: #666;
+            color: var(--text-light);
             margin-bottom: 8px;
             text-transform: uppercase;
         }
@@ -205,17 +393,17 @@
         }
 
         .stat-value.income {
-            color: #27ae60;
+            color: var(--success);
         }
 
         .stat-value.expense {
-            color: #e74c3c;
+            color: var(--danger);
         }
 
         .empty-state {
             text-align: center;
             padding: 40px 20px;
-            color: #999;
+            color: var(--text-muted);
         }
 
         .error {
@@ -224,21 +412,193 @@
             padding: 12px;
             border-radius: 8px;
             margin-bottom: 12px;
+            animation: shake 0.5s;
         }
 
-        .btn-small {
-            width: auto;
-            padding: 8px 16px;
-            font-size: 14px;
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
         }
 
         .btn-delete {
             width: auto;
             padding: 6px 12px;
             font-size: 12px;
-            background: #e74c3c;
+            background: var(--danger);
         }
 
+        .btn-edit {
+            width: auto;
+            padding: 6px 12px;
+            font-size: 12px;
+            background: var(--warning);
+            margin-right: 4px;
+        }
+
+        .btn-edit:hover {
+            background: #e67e22;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            animation: slideUp 0.3s;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 24px;
+            transition: all 0.3s;
+            z-index: 100;
+        }
+
+        .theme-toggle:hover {
+            transform: rotate(180deg);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Filters */
+        .filters {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            background: var(--card-secondary);
+            color: var(--text-dark);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .filter-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* User Info */
+        .user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--card-secondary);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .user-email {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-10px);
+            }
+
+            75% {
+                transform: translateX(10px);
+            }
+        }
+
+        /* Responsive */
         @media (max-width: 600px) {
             body {
                 padding: 10px;
@@ -259,50 +619,150 @@
             .form-row {
                 grid-template-columns: 1fr;
             }
+
+            .filters {
+                justify-content: center;
+            }
+
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+                width: 45px;
+                height: 45px;
+            }
         }
     </style>
 </head>
 
 <body>
+    <div class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">
+        <span id="theme-icon">🌙</span>
+    </div>
+
     <div id="app"></div>
+
+    <!-- Modal de Edição -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h2>Editar Transação</h2>
+            <form id="editForm" onsubmit="handleEditTransaction(event)">
+                <input type="hidden" id="edit-id">
+                <div class="form-row">
+                    <select id="edit-type">
+                        <option value="expense">Despesa</option>
+                        <option value="income">Receita</option>
+                    </select>
+                    <input type="number" step="0.01" id="edit-amount" placeholder="Valor" required>
+                </div>
+                <select id="edit-category">
+                    <option value="">Categoria (opcional)</option>
+                    <optgroup label="💸 Despesas Básicas">
+                        <option value="alimentacao">🍔 Alimentação</option>
+                        <option value="transporte">🚗 Transporte</option>
+                        <option value="moradia">🏠 Moradia</option>
+                        <option value="saude">💊 Saúde</option>
+                        <option value="educacao">📚 Educação</option>
+                    </optgroup>
+                    <optgroup label="🎮 Lazer & Hobbys">
+                        <option value="lazer">🎉 Lazer Geral</option>
+                        <option value="carrinhos">🏎️ Carrinhos Colecionáveis</option>
+                        <option value="moedas">🪙 Moedas Numismática</option>
+                        <option value="hobbys">🎨 Outros Hobbys</option>
+                    </optgroup>
+                    <optgroup label="💰 Receitas">
+                        <option value="salario">💵 Salário</option>
+                        <option value="investimento">📈 Investimento</option>
+                        <option value="venda">💳 Venda</option>
+                        <option value="freelance">💻 Freelance</option>
+                    </optgroup>
+                    <optgroup label="📦 Outros">
+                        <option value="compras">🛒 Compras</option>
+                        <option value="assinaturas">📺 Assinaturas</option>
+                        <option value="presentes">🎁 Presentes</option>
+                        <option value="animais">🐾 Pets</option>
+                        <option value="outros">📋 Outros</option>
+                    </optgroup>
+                </select>
+                <textarea id="edit-comment" placeholder="Comentário (opcional)" rows="2"></textarea>
+                <button type="submit">Salvar</button>
+                <button type="button" class="secondary" onclick="closeEditModal()">Cancelar</button>
+            </form>
+        </div>
+    </div>
 
     <script>
         const API_URL = window.location.origin + '/api';
         let token = localStorage.getItem('token');
+        let refreshToken = localStorage.getItem('refreshToken');
+        let currentUser = null;
+        let currentFilter = 'all';
+        let currentPeriod = 'all';
 
-        // Funções de API
-        async function apiCall(endpoint, options = {}) {
-            const response = await fetch(API_URL + endpoint, {
-                ...options,
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` }),
-                    ...options.headers
-                }
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Erro na requisição');
-            }
-
-            return response.json();
+        // Theme
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            document.getElementById('theme-icon').textContent = newTheme === 'dark' ? '☀️' : '🌙';
         }
 
-        // Componente Login/Registro
+        // Carregar tema salvo
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.getElementById('theme-icon').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+        // API Call com refresh token automático
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch(API_URL + endpoint, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token && { 'Authorization': `Bearer ${token}` }),
+                        ...options.headers
+                    }
+                });
+
+                if (response.status === 401 && refreshToken) {
+                    // Tentar renovar token
+                    const refreshResponse = await fetch(API_URL + '/refresh', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ refreshToken })
+                    });
+
+                    if (refreshResponse.ok) {
+                        const data = await refreshResponse.json();
+                        token = data.token;
+                        localStorage.setItem('token', token);
+
+                        // Repetir requisição original
+                        return apiCall(endpoint, options);
+                    }
+                }
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Erro na requisição');
+                }
+
+                return response.json();
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // Componente Login
         function renderAuth() {
             return `
                 <div class="card login-card">
                     <h1>🔒 Controle Financeiro</h1>
                     <div id="error"></div>
                     <form onsubmit="handleLogin(event)">
-                        <input
-                            type="password"
-                            id="password"
-                            placeholder="Digite sua senha"
-                            required
-                            autofocus
-                        />
+                        <input type="text" id="username" placeholder="Usuário ou Email" required autofocus>
+                        <input type="password" id="password" placeholder="Senha" required>
                         <button type="submit">Entrar</button>
                         <button type="button" class="secondary" onclick="showRegister()">
                             Criar Nova Conta
@@ -312,25 +772,17 @@
             `;
         }
 
+        // Componente Registro
         function renderRegister() {
             return `
                 <div class="card login-card">
                     <h1>✨ Criar Conta</h1>
                     <div id="error"></div>
                     <form onsubmit="handleRegister(event)">
-                        <input
-                            type="password"
-                            id="password"
-                            placeholder="Escolha uma senha"
-                            required
-                            autofocus
-                        />
-                        <input
-                            type="number"
-                            step="0.01"
-                            id="initialBalance"
-                            placeholder="Saldo inicial (opcional)"
-                        />
+                        <input type="text" id="username" placeholder="Nome de usuário" required autofocus>
+                        <input type="email" id="email" placeholder="Email" required>
+                        <input type="password" id="password" placeholder="Senha (mínimo 6 caracteres)" required>
+                        <input type="number" step="0.01" id="initialBalance" placeholder="Saldo inicial (opcional)">
                         <button type="submit">Criar Conta</button>
                         <button type="button" class="secondary" onclick="render()">
                             Voltar ao Login
@@ -348,6 +800,29 @@
                     apiCall('/transactions')
                 ]);
 
+                currentUser = user;
+
+                // Filtrar transações
+                let filteredTransactions = transactions;
+
+                if (currentFilter !== 'all') {
+                    filteredTransactions = filteredTransactions.filter(t => t.type === currentFilter);
+                }
+
+                if (currentPeriod !== 'all') {
+                    const now = new Date();
+                    filteredTransactions = filteredTransactions.filter(t => {
+                        const tDate = new Date(t.date);
+                        if (currentPeriod === 'month') {
+                            return tDate.getMonth() === now.getMonth() && tDate.getFullYear() === now.getFullYear();
+                        }
+                        if (currentPeriod === 'year') {
+                            return tDate.getFullYear() === now.getFullYear();
+                        }
+                        return true;
+                    });
+                }
+
                 const stats = transactions.reduce((acc, t) => {
                     if (t.type === 'income') acc.income += t.amount;
                     else acc.expense += t.amount;
@@ -359,6 +834,16 @@
                 return `
                     <div class="container">
                         <div class="card">
+                            <div class="user-info">
+                                <div>
+                                    <div class="user-name">👤 ${user.username}</div>
+                                    <div class="user-email">${user.email}</div>
+                                </div>
+                                <button class="btn-small" onclick="downloadBackup()">
+                                    💾 Backup
+                                </button>
+                            </div>
+
                             <h1>💰 Meu Controle Financeiro</h1>
                             
                             <div class="balance ${balance < 0 ? 'negative' : 'positive'}">
@@ -389,40 +874,86 @@
                                         <option value="expense">Despesa</option>
                                         <option value="income">Receita</option>
                                     </select>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        id="amount"
-                                        placeholder="Valor"
-                                        required
-                                    />
+                                    <input type="number" step="0.01" id="amount" placeholder="Valor" required>
                                 </div>
-                                <textarea
-                                    id="comment"
-                                    placeholder="Comentário (opcional)"
-                                    rows="2"
-                                ></textarea>
+                                <select id="category">
+                                    <option value="">Categoria (opcional)</option>
+                                    <optgroup label="💸 Despesas Básicas">
+                                        <option value="alimentacao">🍔 Alimentação</option>
+                                        <option value="transporte">🚗 Transporte</option>
+                                        <option value="moradia">🏠 Moradia</option>
+                                        <option value="saude">💊 Saúde</option>
+                                        <option value="educacao">📚 Educação</option>
+                                    </optgroup>
+                                    <optgroup label="🎮 Lazer & Hobbys">
+                                        <option value="lazer">🎉 Lazer Geral</option>
+                                        <option value="carrinhos">🏎️ Carrinhos Colecionáveis</option>
+                                        <option value="moedas">🪙 Moedas Numismática</option>
+                                        <option value="hobbys">🎨 Outros Hobbys</option>
+                                    </optgroup>
+                                    <optgroup label="💰 Receitas">
+                                        <option value="salario">💵 Salário</option>
+                                        <option value="investimento">📈 Investimento</option>
+                                        <option value="venda">💳 Venda</option>
+                                        <option value="freelance">💻 Freelance</option>
+                                    </optgroup>
+                                    <optgroup label="📦 Outros">
+                                        <option value="compras">🛒 Compras</option>
+                                        <option value="assinaturas">📺 Assinaturas</option>
+                                        <option value="presentes">🎁 Presentes</option>
+                                        <option value="animais">🐾 Pets</option>
+                                        <option value="outros">📋 Outros</option>
+                                    </optgroup>
+                                </select>
+                                <textarea id="comment" placeholder="Comentário (opcional)" rows="2"></textarea>
                                 <button type="submit">Adicionar</button>
                             </form>
                         </div>
 
                         <div class="card">
                             <h2>📋 Histórico de Transações</h2>
+                            
+                            <div class="filters">
+                                <button class="filter-btn ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">
+                                    Todas
+                                </button>
+                                <button class="filter-btn ${currentFilter === 'income' ? 'active' : ''}" onclick="setFilter('income')">
+                                    Receitas
+                                </button>
+                                <button class="filter-btn ${currentFilter === 'expense' ? 'active' : ''}" onclick="setFilter('expense')">
+                                    Despesas
+                                </button>
+                                <button class="filter-btn ${currentPeriod === 'month' ? 'active' : ''}" onclick="setPeriod('month')">
+                                    Este Mês
+                                </button>
+                                <button class="filter-btn ${currentPeriod === 'year' ? 'active' : ''}" onclick="setPeriod('year')">
+                                    Este Ano
+                                </button>
+                                <button class="filter-btn ${currentPeriod === 'all' ? 'active' : ''}" onclick="setPeriod('all')">
+                                    Todos
+                                </button>
+                            </div>
+
                             <div class="transaction-list">
-                                ${transactions.length === 0 ? `
+                                ${filteredTransactions.length === 0 ? `
                                     <div class="empty-state">
-                                        Nenhuma transação ainda.<br/>
-                                        Adicione sua primeira transação acima!
+                                        Nenhuma transação encontrada.<br/>
+                                        ${currentFilter !== 'all' || currentPeriod !== 'all' ? 'Tente alterar os filtros.' : 'Adicione sua primeira transação acima!'}
                                     </div>
-                                ` : transactions.map(t => `
+                                ` : filteredTransactions.map(t => `
                                     <div class="transaction-item">
                                         <div class="transaction-info">
-                                           <div class="transaction-date">
-                                                ${t.date} 
+                                            <div class="transaction-date">
+                                                ${t.date}
                                             </div>
-                                            <div style="font-weight: 500; color: #333;">
+                                            <div style="font-weight: 500; color: var(--text-dark);">
                                                 ${t.type === 'income' ? '💵 Receita' : '💸 Despesa'}
                                             </div>
+                                            ${t.category ? `
+                                                <span class="transaction-category category-${t.category}">
+                                                    ${t.category}
+                                                </span>
+                                            ` : ''}
                                             ${t.comment ? `
                                                 <div class="transaction-comment">${t.comment}</div>
                                             ` : ''}
@@ -430,6 +961,9 @@
                                         <div class="transaction-amount ${t.type}">
                                             ${t.type === 'income' ? '+' : '-'} R$ ${t.amount.toFixed(2)}
                                         </div>
+                                        <button class="btn-edit" onclick="openEditModal('${t._id}', '${t.type}', ${t.amount}, '${t.category || ''}', '${(t.comment || '').replace(/'/g, "\\'")}')">
+                                            ✏️
+                                        </button>
                                         <button class="btn-delete" onclick="deleteTransaction('${t._id}')">
                                             🗑️
                                         </button>
@@ -450,38 +984,44 @@
         async function handleLogin(e) {
             e.preventDefault();
             try {
+                const username = document.getElementById('username').value;
                 const password = document.getElementById('password').value;
+
                 const data = await apiCall('/login', {
                     method: 'POST',
-                    body: JSON.stringify({ password })
+                    body: JSON.stringify({ username, password })
                 });
 
                 token = data.token;
+                refreshToken = data.refreshToken;
                 localStorage.setItem('token', token);
+                localStorage.setItem('refreshToken', refreshToken);
                 render();
             } catch (error) {
-                document.getElementById('error').innerHTML =
-                    `<div class="error">${error.message}</div>`;
+                document.getElementById('error').innerHTML = `<div class="error">${error.message}</div>`;
             }
         }
 
         async function handleRegister(e) {
             e.preventDefault();
             try {
+                const username = document.getElementById('username').value;
+                const email = document.getElementById('email').value;
                 const password = document.getElementById('password').value;
                 const initialBalance = parseFloat(document.getElementById('initialBalance').value) || 0;
 
                 const data = await apiCall('/register', {
                     method: 'POST',
-                    body: JSON.stringify({ password, initialBalance })
+                    body: JSON.stringify({ username, email, password, initialBalance })
                 });
 
                 token = data.token;
+                refreshToken = data.refreshToken;
                 localStorage.setItem('token', token);
+                localStorage.setItem('refreshToken', refreshToken);
                 render();
             } catch (error) {
-                document.getElementById('error').innerHTML =
-                    `<div class="error">${error.message}</div>`;
+                document.getElementById('error').innerHTML = `<div class="error">${error.message}</div>`;
             }
         }
 
@@ -490,13 +1030,17 @@
             try {
                 const type = document.getElementById('type').value;
                 const amount = parseFloat(document.getElementById('amount').value);
+                const category = document.getElementById('category').value;
                 const comment = document.getElementById('comment').value;
 
                 await apiCall('/transactions', {
                     method: 'POST',
-                    body: JSON.stringify({ type, amount, comment })
+                    body: JSON.stringify({ type, amount, category, comment })
                 });
 
+                document.getElementById('amount').value = '';
+                document.getElementById('category').value = '';
+                document.getElementById('comment').value = '';
                 render();
             } catch (error) {
                 alert('Erro ao adicionar transação: ' + error.message);
@@ -511,6 +1055,41 @@
                 render();
             } catch (error) {
                 alert('Erro ao deletar transação: ' + error.message);
+            }
+        }
+
+        // Modal de Edição
+        function openEditModal(id, type, amount, category, comment) {
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-type').value = type;
+            document.getElementById('edit-amount').value = amount;
+            document.getElementById('edit-category').value = category;
+            document.getElementById('edit-comment').value = comment;
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+        }
+
+        async function handleEditTransaction(e) {
+            e.preventDefault();
+            try {
+                const id = document.getElementById('edit-id').value;
+                const type = document.getElementById('edit-type').value;
+                const amount = parseFloat(document.getElementById('edit-amount').value);
+                const category = document.getElementById('edit-category').value;
+                const comment = document.getElementById('edit-comment').value;
+
+                await apiCall(`/transactions/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ type, amount, category, comment })
+                });
+
+                closeEditModal();
+                render();
+            } catch (error) {
+                alert('Erro ao editar transação: ' + error.message);
             }
         }
 
@@ -529,9 +1108,52 @@
             }
         }
 
-        function handleLogout() {
+        async function handleLogout() {
+            try {
+                await apiCall('/logout', {
+                    method: 'POST',
+                    body: JSON.stringify({ refreshToken })
+                });
+            } catch (error) {
+                console.error('Erro no logout:', error);
+            }
+
             localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
             token = null;
+            refreshToken = null;
+            render();
+        }
+
+        async function downloadBackup() {
+            try {
+                const response = await fetch(API_URL + '/backup/download', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `backup-${new Date().toISOString().split('T')[0]}.db`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+
+                alert('Backup baixado com sucesso!');
+            } catch (error) {
+                alert('Erro ao baixar backup: ' + error.message);
+            }
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            render();
+        }
+
+        function setPeriod(period) {
+            currentPeriod = period;
             render();
         }
 
@@ -543,6 +1165,14 @@
         async function render() {
             const html = token ? await renderApp() : renderAuth();
             document.getElementById('app').innerHTML = html;
+        }
+
+        // Fechar modal ao clicar fora
+        window.onclick = function (event) {
+            const modal = document.getElementById('editModal');
+            if (event.target === modal) {
+                closeEditModal();
+            }
         }
 
         render();
