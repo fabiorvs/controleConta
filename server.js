@@ -16,6 +16,7 @@ app.use(express.static("public"));
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 const DB_PATH = path.join(DATA_DIR, "financeiro.db");
 const BACKUP_DIR = path.join(DATA_DIR, "backups");
+
 const JWT_SECRET =
   process.env.JWT_SECRET || crypto.randomBytes(32).toString("hex");
 const JWT_REFRESH_SECRET =
@@ -24,12 +25,8 @@ const JWT_REFRESH_SECRET =
 let db;
 
 // Criar diretórios necessários
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-if (!fs.existsSync(BACKUP_DIR)) {
-  fs.mkdirSync(BACKUP_DIR, { recursive: true });
-}
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
 
 // Inicializar sql.js
 async function initDb() {
@@ -59,6 +56,7 @@ async function initDb() {
         amount REAL NOT NULL,
         comment TEXT,
         category TEXT,
+        source TEXT NOT NULL DEFAULT 'account' CHECK(source IN ('account', 'credit')),
         date DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
@@ -81,7 +79,7 @@ async function initDb() {
   }
 }
 
-// Salvar banco de dados
+// Salvar banco
 function saveDb() {
   const data = db.export();
   fs.writeFileSync(DB_PATH, data);
@@ -92,10 +90,8 @@ function createBackup() {
   try {
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const backupPath = path.join(BACKUP_DIR, `backup-${timestamp}.db`);
-
     fs.copyFileSync(DB_PATH, backupPath);
 
-    // Manter apenas últimos 10 backups
     const backups = fs
       .readdirSync(BACKUP_DIR)
       .filter((f) => f.startsWith("backup-"))
@@ -103,9 +99,7 @@ function createBackup() {
       .reverse();
 
     if (backups.length > 10) {
-      backups.slice(10).forEach((f) => {
-        fs.unlinkSync(path.join(BACKUP_DIR, f));
-      });
+      backups.slice(10).forEach((f) => fs.unlinkSync(path.join(BACKUP_DIR, f)));
     }
 
     console.log(`✅ Backup criado: ${backupPath}`);
@@ -114,10 +108,9 @@ function createBackup() {
   }
 }
 
-// Backup automático a cada 6 horas
 setInterval(createBackup, 6 * 60 * 60 * 1000);
 
-// Middleware de autenticação
+// Auth middleware
 const auth = (req, res, next) => {
   try {
     const token = req.header("Authorization")?.replace("Bearer ", "");
@@ -127,12 +120,12 @@ const auth = (req, res, next) => {
     req.userId = decoded.userId;
     req.username = decoded.username;
     next();
-  } catch (error) {
+  } catch {
     res.status(401).json({ error: "Token inválido ou expirado" });
   }
 };
 
-// Limpar tokens expirados
+// Limpar refresh tokens expirados
 function cleanExpiredTokens() {
   try {
     const now = new Date().toISOString();
@@ -142,12 +135,26 @@ function cleanExpiredTokens() {
     console.error("Erro ao limpar tokens:", error);
   }
 }
+setInterval(cleanExpiredTokens, 24 * 60 * 60 * 1000);
 
-setInterval(cleanExpiredTokens, 24 * 60 * 60 * 1000); // Diário
+// Helpers
+function rowToTransaction(row) {
+  // schema:
+  // 0 id, 1 user_id, 2 type, 3 amount, 4 comment, 5 category, 6 source, 7 date
+  return {
+    _id: row[0],
+    type: row[2],
+    amount: Number(row[3]) || 0,
+    comment: row[4],
+    category: row[5],
+    source: row[6] || "account",
+    dateISO: row[7], // string sqlite
+  };
+}
 
 // ROTAS
 
-// Registrar novo usuário
+// Register
 app.post("/api/register", async (req, res) => {
   try {
     const { username, email, password, initialBalance } = req.body;
@@ -164,7 +171,6 @@ app.post("/api/register", async (req, res) => {
         .json({ error: "Senha deve ter pelo menos 6 caracteres" });
     }
 
-    // Verificar se usuário já existe
     const existingUser = db.exec(
       "SELECT id FROM users WHERE username = ? OR email = ?",
       [username, email]
@@ -178,14 +184,14 @@ app.post("/api/register", async (req, res) => {
 
     db.run(
       "INSERT INTO users (username, email, password, initial_balance) VALUES (?, ?, ?, ?)",
-      [username, email, hashedPassword, initialBalance || 0]
+      [username, email, hashedPassword, Number(initialBalance) || 0]
     );
 
     const result = db.exec("SELECT last_insert_rowid() as id")[0];
     const userId = result.values[0][0];
 
     saveDb();
-    createBackup(); // Backup após novo usuário
+    createBackup();
 
     const token = jwt.sign({ userId, username }, JWT_SECRET, {
       expiresIn: "1h",
@@ -194,7 +200,6 @@ app.post("/api/register", async (req, res) => {
       expiresIn: "7d",
     });
 
-    // Salvar refresh token
     const expiresAt = new Date(
       Date.now() + 7 * 24 * 60 * 60 * 1000
     ).toISOString();
@@ -204,12 +209,7 @@ app.post("/api/register", async (req, res) => {
     );
     saveDb();
 
-    res.status(201).json({
-      token,
-      refreshToken,
-      userId,
-      username,
-    });
+    res.status(201).json({ token, refreshToken, userId, username });
   } catch (error) {
     console.error(error);
     res.status(400).json({ error: "Erro ao criar conta" });
@@ -242,11 +242,9 @@ app.post("/api/login", async (req, res) => {
     };
 
     const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) {
+    if (!isValid)
       return res.status(401).json({ error: "Usuário ou senha incorretos" });
-    }
 
-    // Atualizar último login
     db.run("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?", [
       user.id,
     ]);
@@ -263,7 +261,6 @@ app.post("/api/login", async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    // Salvar refresh token
     const expiresAt = new Date(
       Date.now() + 7 * 24 * 60 * 60 * 1000
     ).toISOString();
@@ -273,51 +270,35 @@ app.post("/api/login", async (req, res) => {
     );
     saveDb();
 
-    res.json({
-      token,
-      refreshToken,
-      userId: user.id,
-      username: user.username,
-    });
+    res.json({ token, refreshToken, userId: user.id, username: user.username });
   } catch (error) {
     console.error(error);
     res.status(400).json({ error: "Erro no login" });
   }
 });
 
-// Refresh token (renovar sessão)
+// Refresh
 app.post("/api/refresh", async (req, res) => {
   try {
     const { refreshToken } = req.body;
-
-    if (!refreshToken) {
+    if (!refreshToken)
       return res.status(400).json({ error: "Refresh token não fornecido" });
-    }
 
-    // Verificar se token existe no banco
     const result = db.exec(
       "SELECT user_id, expires_at FROM refresh_tokens WHERE token = ?",
       [refreshToken]
     );
 
-    if (!result.length) {
+    if (!result.length)
       return res.status(401).json({ error: "Refresh token inválido" });
-    }
 
-    const tokenData = {
-      userId: result[0].values[0][0],
-      expiresAt: result[0].values[0][1],
-    };
-
-    // Verificar se expirou
-    if (new Date(tokenData.expiresAt) < new Date()) {
+    const expiresAt = result[0].values[0][1];
+    if (new Date(expiresAt) < new Date()) {
       return res.status(401).json({ error: "Refresh token expirado" });
     }
 
-    // Verificar assinatura
     const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
 
-    // Gerar novo access token
     const newToken = jwt.sign(
       { userId: decoded.userId, username: decoded.username },
       JWT_SECRET,
@@ -331,33 +312,29 @@ app.post("/api/refresh", async (req, res) => {
   }
 });
 
-// Logout (invalidar refresh token)
+// Logout
 app.post("/api/logout", auth, (req, res) => {
   try {
     const { refreshToken } = req.body;
-
     if (refreshToken) {
       db.run("DELETE FROM refresh_tokens WHERE token = ?", [refreshToken]);
       saveDb();
     }
-
     res.json({ success: true });
-  } catch (error) {
+  } catch {
     res.status(400).json({ error: "Erro ao fazer logout" });
   }
 });
 
-// Buscar dados do usuário
+// User
 app.get("/api/user", auth, (req, res) => {
   try {
     const result = db.exec(
       "SELECT id, username, email, initial_balance, created_at, last_login FROM users WHERE id = ?",
       [req.userId]
     );
-
-    if (!result.length) {
+    if (!result.length)
       return res.status(404).json({ error: "Usuário não encontrado" });
-    }
 
     const user = {
       _id: result[0].values[0][0],
@@ -370,7 +347,65 @@ app.get("/api/user", auth, (req, res) => {
 
     res.json(user);
   } catch (error) {
+    console.error(error);
     res.status(400).json({ error: "Erro ao buscar usuário" });
+  }
+});
+
+// Dashboard (corrigido: índices + objetos)
+app.get("/api/dashboard", auth, (req, res) => {
+  try {
+    const userResult = db.exec(
+      "SELECT initial_balance FROM users WHERE id = ?",
+      [req.userId]
+    );
+    const initialBalance = Number(userResult[0]?.values[0][0] || 0);
+
+    const result = db.exec(
+      "SELECT * FROM transactions WHERE user_id = ? ORDER BY date DESC",
+      [req.userId]
+    );
+
+    const rows = result[0]?.values || [];
+    const transactions = rows.map(rowToTransaction);
+
+    // separar por source
+    const accountTransactions = transactions.filter(
+      (t) => t.source === "account"
+    );
+    const creditTransactions = transactions.filter(
+      (t) => t.source === "credit"
+    );
+
+    const accountBalance = accountTransactions.reduce((acc, t) => {
+      return t.type === "income" ? acc + t.amount : acc - t.amount;
+    }, initialBalance);
+
+    // gastos no cartão este mês
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const creditExpensesThisMonth = creditTransactions
+      .filter((t) => t.type === "expense" && new Date(t.dateISO) >= firstDay)
+      .reduce((acc, t) => acc + t.amount, 0);
+
+    // total cartão (fatura estimada)
+    const creditTotal = creditTransactions.reduce((acc, t) => {
+      return t.type === "expense" ? acc + t.amount : acc - t.amount;
+    }, 0);
+
+    res.json({
+      accountBalance,
+      creditExpensesThisMonth,
+      creditTotal,
+      totalTransactions: transactions.length,
+      accountTransactions: accountTransactions.length,
+      creditTransactions: creditTransactions.length,
+      transactions,
+    });
+  } catch (error) {
+    console.error("Dashboard error:", error);
+    res.status(400).json({ error: "Erro ao carregar dashboard" });
   }
 });
 
@@ -379,17 +414,18 @@ app.put("/api/user/balance", auth, (req, res) => {
   try {
     const { initialBalance } = req.body;
     db.run("UPDATE users SET initial_balance = ? WHERE id = ?", [
-      initialBalance,
+      Number(initialBalance) || 0,
       req.userId,
     ]);
     saveDb();
     res.json({ success: true });
   } catch (error) {
+    console.error(error);
     res.status(400).json({ error: "Erro ao atualizar saldo" });
   }
 });
 
-// Buscar transações
+// Buscar transações (corrigido: date/source)
 app.get("/api/transactions", auth, (req, res) => {
   try {
     const result = db.exec(
@@ -397,26 +433,8 @@ app.get("/api/transactions", auth, (req, res) => {
       [req.userId]
     );
 
-    if (!result.length) {
-      return res.json([]);
-    }
-
-    const transactions = result[0].values.map((row) => {
-      const d = new Date(row[6]); // data está na posição 6 agora
-      const dateBR = d.toLocaleString("sv-SE", {
-        timeZone: "America/Sao_Paulo",
-      });
-
-      return {
-        _id: row[0],
-        type: row[2],
-        amount: row[3],
-        comment: row[4],
-        category: row[5], // adicionar categoria
-        date: dateBR,
-      };
-    });
-
+    const rows = result[0]?.values || [];
+    const transactions = rows.map(rowToTransaction);
     res.json(transactions);
   } catch (error) {
     console.error(error);
@@ -427,15 +445,21 @@ app.get("/api/transactions", auth, (req, res) => {
 // Criar transação
 app.post("/api/transactions", auth, (req, res) => {
   try {
-    const { type, amount, comment, category } = req.body;
+    const { type, amount, comment, category, source = "account" } = req.body;
 
-    if (!type || !amount || !["income", "expense"].includes(type)) {
+    const amt = Number(amount);
+    if (
+      !type ||
+      !Number.isFinite(amt) ||
+      !["income", "expense"].includes(type) ||
+      !["account", "credit"].includes(source)
+    ) {
       return res.status(400).json({ error: "Dados inválidos" });
     }
 
     db.run(
-      "INSERT INTO transactions (user_id, type, amount, comment, category) VALUES (?, ?, ?, ?, ?)",
-      [req.userId, type, amount, comment || null, category || null]
+      "INSERT INTO transactions (user_id, type, amount, comment, category, source) VALUES (?, ?, ?, ?, ?, ?)",
+      [req.userId, type, amt, comment || null, category || null, source]
     );
 
     const result = db.exec("SELECT last_insert_rowid() as id")[0];
@@ -446,14 +470,53 @@ app.post("/api/transactions", auth, (req, res) => {
     res.status(201).json({
       _id: id,
       type,
-      amount,
-      comment,
-      category,
-      date: new Date().toISOString(),
+      amount: amt,
+      comment: comment || null,
+      category: category || null,
+      source,
+      dateISO: new Date().toISOString(),
     });
   } catch (error) {
     console.error(error);
     res.status(400).json({ error: "Erro ao criar transação" });
+  }
+});
+
+// EDITAR transação (ADICIONADO)
+app.put("/api/transactions/:id", auth, (req, res) => {
+  try {
+    const { type, amount, comment, category, source } = req.body;
+    const amt = Number(amount);
+
+    if (
+      !type ||
+      !Number.isFinite(amt) ||
+      !["income", "expense"].includes(type) ||
+      (source && !["account", "credit"].includes(source))
+    ) {
+      return res.status(400).json({ error: "Dados inválidos" });
+    }
+
+    db.run(
+      `UPDATE transactions
+       SET type = ?, amount = ?, comment = ?, category = ?, source = ?
+       WHERE id = ? AND user_id = ?`,
+      [
+        type,
+        amt,
+        comment || null,
+        category || null,
+        source || "account",
+        req.params.id,
+        req.userId,
+      ]
+    );
+
+    saveDb();
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: "Erro ao editar transação" });
   }
 });
 
@@ -467,6 +530,7 @@ app.delete("/api/transactions/:id", auth, (req, res) => {
     saveDb();
     res.json({ success: true });
   } catch (error) {
+    console.error(error);
     res.status(400).json({ error: "Erro ao deletar transação" });
   }
 });
@@ -477,11 +541,12 @@ app.get("/api/backup/download", auth, (req, res) => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     res.download(DB_PATH, `controle-financeiro-${timestamp}.db`);
   } catch (error) {
+    console.error(error);
     res.status(400).json({ error: "Erro ao fazer backup" });
   }
 });
 
-// Listar backups disponíveis
+// Listar backups
 app.get("/api/backup/list", auth, (req, res) => {
   try {
     const backups = fs
@@ -496,11 +561,12 @@ app.get("/api/backup/list", auth, (req, res) => {
 
     res.json(backups);
   } catch (error) {
+    console.error(error);
     res.status(400).json({ error: "Erro ao listar backups" });
   }
 });
 
-// Iniciar servidor
+// Start
 initDb().then(() => {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {

@@ -184,10 +184,6 @@
             margin-bottom: 8px;
         }
 
-        .btn-icon {
-            padding: 8px 12px;
-        }
-
         .transaction-list {
             max-height: 500px;
             overflow-y: auto;
@@ -251,17 +247,7 @@
             text-transform: uppercase;
         }
 
-        .transaction-category {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
-            margin-top: 4px;
-            text-transform: uppercase;
-        }
-
-        /* Despesas Básicas */
+        /* Categories */
         .category-alimentacao {
             background: #ffeaa7;
             color: #2d3436;
@@ -287,7 +273,6 @@
             color: #2d3436;
         }
 
-        /* Lazer & Hobbys */
         .category-lazer {
             background: #fd79a8;
             color: #2d3436;
@@ -308,7 +293,6 @@
             color: white;
         }
 
-        /* Receitas */
         .category-salario {
             background: #00b894;
             color: white;
@@ -329,7 +313,6 @@
             color: white;
         }
 
-        /* Outros */
         .category-compras {
             background: #fdcb6e;
             color: #2d3436;
@@ -377,7 +360,7 @@
         }
 
         .stat-card:hover {
-            transform: scale(1.05);
+            transform: scale(1.02);
         }
 
         .stat-label {
@@ -388,7 +371,7 @@
         }
 
         .stat-value {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
         }
 
@@ -465,7 +448,7 @@
             background: var(--card-bg);
             padding: 24px;
             border-radius: 12px;
-            max-width: 500px;
+            max-width: 520px;
             width: 90%;
             animation: slideUp 0.3s;
         }
@@ -547,7 +530,6 @@
             color: var(--text-muted);
         }
 
-        /* Animations */
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -598,7 +580,6 @@
             }
         }
 
-        /* Responsive */
         @media (max-width: 600px) {
             body {
                 padding: 10px;
@@ -648,12 +629,17 @@
             <form id="editForm" onsubmit="handleEditTransaction(event)">
                 <input type="hidden" id="edit-id">
                 <div class="form-row">
+                    <select id="edit-source">
+                        <option value="account">💳 Conta Corrente</option>
+                        <option value="credit">💳 Cartão de Crédito</option>
+                    </select>
                     <select id="edit-type">
                         <option value="expense">Despesa</option>
                         <option value="income">Receita</option>
                     </select>
                     <input type="number" step="0.01" id="edit-amount" placeholder="Valor" required>
                 </div>
+
                 <select id="edit-category">
                     <option value="">Categoria (opcional)</option>
                     <optgroup label="💸 Despesas Básicas">
@@ -683,6 +669,7 @@
                         <option value="outros">📋 Outros</option>
                     </optgroup>
                 </select>
+
                 <textarea id="edit-comment" placeholder="Comentário (opcional)" rows="2"></textarea>
                 <button type="submit">Salvar</button>
                 <button type="button" class="secondary" onclick="closeEditModal()">Cancelar</button>
@@ -708,102 +695,111 @@
             document.getElementById('theme-icon').textContent = newTheme === 'dark' ? '☀️' : '🌙';
         }
 
-        // Carregar tema salvo
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
         document.getElementById('theme-icon').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
 
+        function formatBRL(v) {
+            const n = Number(v) || 0;
+            return n.toFixed(2);
+        }
+
+        function formatDateBR(dateISO) {
+            if (!dateISO) return '';
+            const d = new Date(dateISO);
+            if (Number.isNaN(d.getTime())) return String(dateISO);
+            return new Intl.DateTimeFormat('pt-BR', {
+                dateStyle: 'short',
+                timeStyle: 'short',
+                timeZone: 'America/Sao_Paulo',
+            }).format(d);
+        }
+
         // API Call com refresh token automático
         async function apiCall(endpoint, options = {}) {
-            try {
-                const response = await fetch(API_URL + endpoint, {
-                    ...options,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(token && { 'Authorization': `Bearer ${token}` }),
-                        ...options.headers
-                    }
+            const response = await fetch(API_URL + endpoint, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token && { 'Authorization': `Bearer ${token}` }),
+                    ...options.headers
+                }
+            });
+
+            if (response.status === 401 && refreshToken) {
+                const refreshResponse = await fetch(API_URL + '/refresh', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refreshToken })
                 });
 
-                if (response.status === 401 && refreshToken) {
-                    // Tentar renovar token
-                    const refreshResponse = await fetch(API_URL + '/refresh', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ refreshToken })
-                    });
-
-                    if (refreshResponse.ok) {
-                        const data = await refreshResponse.json();
-                        token = data.token;
-                        localStorage.setItem('token', token);
-
-                        // Repetir requisição original
-                        return apiCall(endpoint, options);
-                    }
+                if (refreshResponse.ok) {
+                    const data = await refreshResponse.json();
+                    token = data.token;
+                    localStorage.setItem('token', token);
+                    return apiCall(endpoint, options);
                 }
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Erro na requisição');
-                }
-
-                return response.json();
-            } catch (error) {
-                throw error;
             }
+
+            if (!response.ok) {
+                let err = { error: 'Erro na requisição' };
+                try { err = await response.json(); } catch { }
+                throw new Error(err.error || 'Erro na requisição');
+            }
+
+            return response.json();
         }
 
-        // Componente Login
+        // Login
         function renderAuth() {
             return `
-                <div class="card login-card">
-                    <h1>🔒 Controle Financeiro</h1>
-                    <div id="error"></div>
-                    <form onsubmit="handleLogin(event)">
-                        <input type="text" id="username" placeholder="Usuário ou Email" required autofocus>
-                        <input type="password" id="password" placeholder="Senha" required>
-                        <button type="submit">Entrar</button>
-                        <button type="button" class="secondary" onclick="showRegister()">
-                            Criar Nova Conta
-                        </button>
-                    </form>
-                </div>
-            `;
+        <div class="card login-card">
+          <h1>🔒 Controle Financeiro</h1>
+          <div id="error"></div>
+          <form onsubmit="handleLogin(event)">
+            <input type="text" id="username" placeholder="Usuário ou Email" required autofocus>
+            <input type="password" id="password" placeholder="Senha" required>
+            <button type="submit">Entrar</button>
+            <button type="button" class="secondary" onclick="showRegister()">Criar Nova Conta</button>
+          </form>
+        </div>
+      `;
         }
 
-        // Componente Registro
         function renderRegister() {
             return `
-                <div class="card login-card">
-                    <h1>✨ Criar Conta</h1>
-                    <div id="error"></div>
-                    <form onsubmit="handleRegister(event)">
-                        <input type="text" id="username" placeholder="Nome de usuário" required autofocus>
-                        <input type="email" id="email" placeholder="Email" required>
-                        <input type="password" id="password" placeholder="Senha (mínimo 6 caracteres)" required>
-                        <input type="number" step="0.01" id="initialBalance" placeholder="Saldo inicial (opcional)">
-                        <button type="submit">Criar Conta</button>
-                        <button type="button" class="secondary" onclick="render()">
-                            Voltar ao Login
-                        </button>
-                    </form>
-                </div>
-            `;
+        <div class="card login-card">
+          <h1>✨ Criar Conta</h1>
+          <div id="error"></div>
+          <form onsubmit="handleRegister(event)">
+            <input type="text" id="username" placeholder="Nome de usuário" required autofocus>
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="password" id="password" placeholder="Senha (mínimo 6 caracteres)" required>
+            <input type="number" step="0.01" id="initialBalance" placeholder="Saldo inicial (opcional)">
+            <button type="submit">Criar Conta</button>
+            <button type="button" class="secondary" onclick="render()">Voltar ao Login</button>
+          </form>
+        </div>
+      `;
         }
 
-        // Componente Principal
+        // Principal
         async function renderApp() {
             try {
-                const [user, transactions] = await Promise.all([
-                    apiCall('/user'),
-                    apiCall('/transactions')
-                ]);
+                const data = await apiCall('/dashboard');
+                const user = await apiCall('/user');
 
                 currentUser = user;
 
-                // Filtrar transações
-                let filteredTransactions = transactions;
+                const {
+                    accountBalance,
+                    creditExpensesThisMonth,
+                    creditTotal,
+                    transactions
+                } = data;
+
+                // Filtrar transações (agora são objetos)
+                let filteredTransactions = Array.isArray(transactions) ? [...transactions] : [];
 
                 if (currentFilter !== 'all') {
                     filteredTransactions = filteredTransactions.filter(t => t.type === currentFilter);
@@ -812,7 +808,9 @@
                 if (currentPeriod !== 'all') {
                     const now = new Date();
                     filteredTransactions = filteredTransactions.filter(t => {
-                        const tDate = new Date(t.date);
+                        const tDate = new Date(t.dateISO);
+                        if (Number.isNaN(tDate.getTime())) return false;
+
                         if (currentPeriod === 'month') {
                             return tDate.getMonth() === now.getMonth() && tDate.getFullYear() === now.getFullYear();
                         }
@@ -823,158 +821,169 @@
                     });
                 }
 
-                const stats = transactions.reduce((acc, t) => {
-                    if (t.type === 'income') acc.income += t.amount;
-                    else acc.expense += t.amount;
+                // Stats separados por source
+                const stats = filteredTransactions.reduce((acc, t) => {
+                    const amount = Number(t.amount) || 0;
+                    const src = t.source === 'credit' ? 'credit' : 'account';
+                    if (t.type === 'income') acc[src].income += amount;
+                    else acc[src].expense += amount;
                     return acc;
-                }, { income: 0, expense: 0 });
+                }, {
+                    account: { income: 0, expense: 0 },
+                    credit: { income: 0, expense: 0 }
+                });
 
-                const balance = user.initialBalance + stats.income - stats.expense;
+                const balance = Number(accountBalance) || 0;
 
                 return `
-                    <div class="container">
-                        <div class="card">
-                            <div class="user-info">
-                                <div>
-                                    <div class="user-name">👤 ${user.username}</div>
-                                    <div class="user-email">${user.email}</div>
-                                </div>
-                                <button class="btn-small" onclick="downloadBackup()">
-                                    💾 Backup
-                                </button>
-                            </div>
+          <div class="container">
+            <div class="card">
+              <div class="user-info">
+                <div>
+                  <div class="user-name">👤 ${user.username}</div>
+                  <div class="user-email">${user.email}</div>
+                </div>
+                <button class="btn-small" onclick="downloadBackup()">💾 Backup</button>
+              </div>
 
-                            <h1>💰 Meu Controle Financeiro</h1>
-                            
-                            <div class="balance ${balance < 0 ? 'negative' : 'positive'}">
-                                R$ ${balance.toFixed(2)}
-                            </div>
-                            
-                            <button class="btn-small" onclick="setInitialBalance()">
-                                Definir Saldo Inicial
-                            </button>
+              <h1>💰 Meu Controle Financeiro</h1>
 
-                            <div class="stats">
-                                <div class="stat-card">
-                                    <div class="stat-label">Total Receitas</div>
-                                    <div class="stat-value income">+ R$ ${stats.income.toFixed(2)}</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-label">Total Despesas</div>
-                                    <div class="stat-value expense">- R$ ${stats.expense.toFixed(2)}</div>
-                                </div>
-                            </div>
-                        </div>
+              <div class="balance ${balance < 0 ? 'negative' : 'positive'}">
+                R$ ${formatBRL(balance)}
+              </div>
 
-                        <div class="card">
-                            <h2>➕ Nova Transação</h2>
-                            <form onsubmit="handleAddTransaction(event)">
-                                <div class="form-row">
-                                    <select id="type">
-                                        <option value="expense">Despesa</option>
-                                        <option value="income">Receita</option>
-                                    </select>
-                                    <input type="number" step="0.01" id="amount" placeholder="Valor" required>
-                                </div>
-                                <select id="category">
-                                    <option value="">Categoria (opcional)</option>
-                                    <optgroup label="💸 Despesas Básicas">
-                                        <option value="alimentacao">🍔 Alimentação</option>
-                                        <option value="transporte">🚗 Transporte</option>
-                                        <option value="moradia">🏠 Moradia</option>
-                                        <option value="saude">💊 Saúde</option>
-                                        <option value="educacao">📚 Educação</option>
-                                    </optgroup>
-                                    <optgroup label="🎮 Lazer & Hobbys">
-                                        <option value="lazer">🎉 Lazer Geral</option>
-                                        <option value="carrinhos">🏎️ Carrinhos Colecionáveis</option>
-                                        <option value="moedas">🪙 Moedas Numismática</option>
-                                        <option value="hobbys">🎨 Outros Hobbys</option>
-                                    </optgroup>
-                                    <optgroup label="💰 Receitas">
-                                        <option value="salario">💵 Salário</option>
-                                        <option value="investimento">📈 Investimento</option>
-                                        <option value="venda">💳 Venda</option>
-                                        <option value="freelance">💻 Freelance</option>
-                                    </optgroup>
-                                    <optgroup label="📦 Outros">
-                                        <option value="compras">🛒 Compras</option>
-                                        <option value="assinaturas">📺 Assinaturas</option>
-                                        <option value="presentes">🎁 Presentes</option>
-                                        <option value="animais">🐾 Pets</option>
-                                        <option value="outros">📋 Outros</option>
-                                    </optgroup>
-                                </select>
-                                <textarea id="comment" placeholder="Comentário (opcional)" rows="2"></textarea>
-                                <button type="submit">Adicionar</button>
-                            </form>
-                        </div>
+              <button class="btn-small" onclick="setInitialBalance()">Definir Saldo Inicial</button>
 
-                        <div class="card">
-                            <h2>📋 Histórico de Transações</h2>
-                            
-                            <div class="filters">
-                                <button class="filter-btn ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">
-                                    Todas
-                                </button>
-                                <button class="filter-btn ${currentFilter === 'income' ? 'active' : ''}" onclick="setFilter('income')">
-                                    Receitas
-                                </button>
-                                <button class="filter-btn ${currentFilter === 'expense' ? 'active' : ''}" onclick="setFilter('expense')">
-                                    Despesas
-                                </button>
-                                <button class="filter-btn ${currentPeriod === 'month' ? 'active' : ''}" onclick="setPeriod('month')">
-                                    Este Mês
-                                </button>
-                                <button class="filter-btn ${currentPeriod === 'year' ? 'active' : ''}" onclick="setPeriod('year')">
-                                    Este Ano
-                                </button>
-                                <button class="filter-btn ${currentPeriod === 'all' ? 'active' : ''}" onclick="setPeriod('all')">
-                                    Todos
-                                </button>
-                            </div>
+              <h2 style="margin-top:18px;">🏦 Conta Corrente</h2>
+              <div class="stats">
+                <div class="stat-card">
+                  <div class="stat-label">Receitas (Conta)</div>
+                  <div class="stat-value income">+ R$ ${formatBRL(stats.account.income)}</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-label">Despesas (Conta)</div>
+                  <div class="stat-value expense">- R$ ${formatBRL(stats.account.expense)}</div>
+                </div>
+              </div>
 
-                            <div class="transaction-list">
-                                ${filteredTransactions.length === 0 ? `
-                                    <div class="empty-state">
-                                        Nenhuma transação encontrada.<br/>
-                                        ${currentFilter !== 'all' || currentPeriod !== 'all' ? 'Tente alterar os filtros.' : 'Adicione sua primeira transação acima!'}
-                                    </div>
-                                ` : filteredTransactions.map(t => `
-                                    <div class="transaction-item">
-                                        <div class="transaction-info">
-                                            <div class="transaction-date">
-                                                ${t.date}
-                                            </div>
-                                            <div style="font-weight: 500; color: var(--text-dark);">
-                                                ${t.type === 'income' ? '💵 Receita' : '💸 Despesa'}
-                                            </div>
-                                            ${t.category ? `
-                                                <span class="transaction-category category-${t.category}">
-                                                    ${t.category}
-                                                </span>
-                                            ` : ''}
-                                            ${t.comment ? `
-                                                <div class="transaction-comment">${t.comment}</div>
-                                            ` : ''}
-                                        </div>
-                                        <div class="transaction-amount ${t.type}">
-                                            ${t.type === 'income' ? '+' : '-'} R$ ${t.amount.toFixed(2)}
-                                        </div>
-                                        <button class="btn-edit" onclick="openEditModal('${t._id}', '${t.type}', ${t.amount}, '${t.category || ''}', '${(t.comment || '').replace(/'/g, "\\'")}')">
-                                            ✏️
-                                        </button>
-                                        <button class="btn-delete" onclick="deleteTransaction('${t._id}')">
-                                            🗑️
-                                        </button>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
+              <h2 style="margin-top:10px;">💳 Cartão de Crédito</h2>
+              <div class="stats">
+                <div class="stat-card">
+                  <div class="stat-label">Gastos este mês</div>
+                  <div class="stat-value expense">- R$ ${formatBRL(creditExpensesThisMonth)}</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-label">Total (fatura estimada)</div>
+                  <div class="stat-value expense">R$ ${formatBRL(creditTotal)}</div>
+                </div>
+              </div>
+            </div>
 
-                        <button class="logout" onclick="handleLogout()">Sair</button>
+            <div class="card">
+              <h2>➕ Nova Transação</h2>
+              <form onsubmit="handleAddTransaction(event)">
+                <div class="form-row">
+                  <select id="type">
+                    <option value="expense">Despesa</option>
+                    <option value="income">Receita</option>
+                  </select>
+                  <select id="source">
+                    <option value="account">💳 Conta Corrente</option>
+                    <option value="credit">💳 Cartão de Crédito</option>
+                  </select>
+                </div>
+
+                <input type="number" step="0.01" id="amount" placeholder="Valor" required />
+
+                <select id="category">
+                  <option value="">Categoria (opcional)</option>
+                  <optgroup label="💸 Despesas Básicas">
+                    <option value="alimentacao">🍔 Alimentação</option>
+                    <option value="transporte">🚗 Transporte</option>
+                    <option value="moradia">🏠 Moradia</option>
+                    <option value="saude">💊 Saúde</option>
+                    <option value="educacao">📚 Educação</option>
+                  </optgroup>
+                  <optgroup label="🎮 Lazer & Hobbys">
+                    <option value="lazer">🎉 Lazer Geral</option>
+                    <option value="carrinhos">🏎️ Carrinhos Colecionáveis</option>
+                    <option value="moedas">🪙 Moedas Numismática</option>
+                    <option value="hobbys">🎨 Outros Hobbys</option>
+                  </optgroup>
+                  <optgroup label="💰 Receitas">
+                    <option value="salario">💵 Salário</option>
+                    <option value="investimento">📈 Investimento</option>
+                    <option value="venda">💳 Venda</option>
+                    <option value="freelance">💻 Freelance</option>
+                  </optgroup>
+                  <optgroup label="📦 Outros">
+                    <option value="compras">🛒 Compras</option>
+                    <option value="assinaturas">📺 Assinaturas</option>
+                    <option value="presentes">🎁 Presentes</option>
+                    <option value="animais">🐾 Pets</option>
+                    <option value="outros">📋 Outros</option>
+                  </optgroup>
+                </select>
+
+                <textarea id="comment" placeholder="Comentário (opcional)" rows="2"></textarea>
+                <button type="submit">Adicionar</button>
+              </form>
+            </div>
+
+            <div class="card">
+              <h2>📋 Histórico de Transações</h2>
+
+              <div class="filters">
+                <button class="filter-btn ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">Todas</button>
+                <button class="filter-btn ${currentFilter === 'income' ? 'active' : ''}" onclick="setFilter('income')">Receitas</button>
+                <button class="filter-btn ${currentFilter === 'expense' ? 'active' : ''}" onclick="setFilter('expense')">Despesas</button>
+
+                <button class="filter-btn ${currentPeriod === 'month' ? 'active' : ''}" onclick="setPeriod('month')">Este Mês</button>
+                <button class="filter-btn ${currentPeriod === 'year' ? 'active' : ''}" onclick="setPeriod('year')">Este Ano</button>
+                <button class="filter-btn ${currentPeriod === 'all' ? 'active' : ''}" onclick="setPeriod('all')">Todos</button>
+              </div>
+
+              <div class="transaction-list">
+                ${filteredTransactions.length === 0 ? `
+                  <div class="empty-state">
+                    Nenhuma transação encontrada.<br/>
+                    ${currentFilter !== 'all' || currentPeriod !== 'all' ? 'Tente alterar os filtros.' : 'Adicione sua primeira transação acima!'}
+                  </div>
+                ` : filteredTransactions.map(t => `
+                  <div class="transaction-item">
+                    <div class="transaction-info">
+                      <div class="transaction-date">${formatDateBR(t.dateISO)}</div>
+                      <div style="font-weight: 500; color: var(--text-dark);">
+                        ${t.type === "income" ? "💵 Receita" : "💸 Despesa"}
+                        ${t.source === "credit" ? " • Cartão" : " • Conta"}
+                      </div>
+
+                      ${t.category ? `
+                        <span class="transaction-category category-${t.category}">
+                          ${t.category}
+                        </span>
+                      ` : ""}
+
+                      ${t.comment ? `<div class="transaction-comment">${t.comment}</div>` : ""}
                     </div>
-                `;
+
+                    <div class="transaction-amount ${t.type}">
+                      ${t.type === 'income' ? '+' : '-'} R$ ${formatBRL(t.amount)}
+                    </div>
+
+                    <button class="btn-edit"
+                      onclick="openEditModal('${t._id}', '${t.source}', '${t.type}', ${Number(t.amount) || 0}, '${t.category || ''}', '${(t.comment || '').replace(/'/g, "\\'")}')">
+                      ✏️
+                    </button>
+                    <button class="btn-delete" onclick="deleteTransaction('${t._id}')">🗑️</button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <button class="logout" onclick="handleLogout()">Sair</button>
+          </div>
+        `;
             } catch (error) {
                 return renderAuth();
             }
@@ -1028,28 +1037,28 @@
         async function handleAddTransaction(e) {
             e.preventDefault();
             try {
-                const type = document.getElementById('type').value;
-                const amount = parseFloat(document.getElementById('amount').value);
-                const category = document.getElementById('category').value;
-                const comment = document.getElementById('comment').value;
+                const type = document.getElementById("type").value;
+                const source = document.getElementById("source").value;
+                const amount = parseFloat(document.getElementById("amount").value);
+                const category = document.getElementById("category").value;
+                const comment = document.getElementById("comment").value;
 
-                await apiCall('/transactions', {
-                    method: 'POST',
-                    body: JSON.stringify({ type, amount, category, comment })
+                await apiCall("/transactions", {
+                    method: "POST",
+                    body: JSON.stringify({ type, amount, category, comment, source }),
                 });
 
-                document.getElementById('amount').value = '';
-                document.getElementById('category').value = '';
-                document.getElementById('comment').value = '';
+                document.getElementById("amount").value = "";
+                document.getElementById("category").value = "";
+                document.getElementById("comment").value = "";
                 render();
             } catch (error) {
-                alert('Erro ao adicionar transação: ' + error.message);
+                alert("Erro ao adicionar transação: " + error.message);
             }
         }
 
         async function deleteTransaction(id) {
             if (!confirm('Deseja realmente deletar esta transação?')) return;
-
             try {
                 await apiCall(`/transactions/${id}`, { method: 'DELETE' });
                 render();
@@ -1058,13 +1067,14 @@
             }
         }
 
-        // Modal de Edição
-        function openEditModal(id, type, amount, category, comment) {
+        // Modal
+        function openEditModal(id, source, type, amount, category, comment) {
             document.getElementById('edit-id').value = id;
+            document.getElementById('edit-source').value = source || 'account';
             document.getElementById('edit-type').value = type;
-            document.getElementById('edit-amount').value = amount;
-            document.getElementById('edit-category').value = category;
-            document.getElementById('edit-comment').value = comment;
+            document.getElementById('edit-amount').value = Number(amount) || 0;
+            document.getElementById('edit-category').value = category || '';
+            document.getElementById('edit-comment').value = comment || '';
             document.getElementById('editModal').classList.add('active');
         }
 
@@ -1076,6 +1086,7 @@
             e.preventDefault();
             try {
                 const id = document.getElementById('edit-id').value;
+                const source = document.getElementById('edit-source').value;
                 const type = document.getElementById('edit-type').value;
                 const amount = parseFloat(document.getElementById('edit-amount').value);
                 const category = document.getElementById('edit-category').value;
@@ -1083,7 +1094,7 @@
 
                 await apiCall(`/transactions/${id}`, {
                     method: 'PUT',
-                    body: JSON.stringify({ type, amount, category, comment })
+                    body: JSON.stringify({ source, type, amount, category, comment })
                 });
 
                 closeEditModal();
@@ -1114,9 +1125,7 @@
                     method: 'POST',
                     body: JSON.stringify({ refreshToken })
                 });
-            } catch (error) {
-                console.error('Erro no logout:', error);
-            }
+            } catch { }
 
             localStorage.removeItem('token');
             localStorage.removeItem('refreshToken');
@@ -1147,32 +1156,21 @@
             }
         }
 
-        function setFilter(filter) {
-            currentFilter = filter;
-            render();
-        }
-
-        function setPeriod(period) {
-            currentPeriod = period;
-            render();
-        }
+        function setFilter(filter) { currentFilter = filter; render(); }
+        function setPeriod(period) { currentPeriod = period; render(); }
 
         function showRegister() {
             document.getElementById('app').innerHTML = renderRegister();
         }
 
-        // Render principal
         async function render() {
             const html = token ? await renderApp() : renderAuth();
             document.getElementById('app').innerHTML = html;
         }
 
-        // Fechar modal ao clicar fora
         window.onclick = function (event) {
             const modal = document.getElementById('editModal');
-            if (event.target === modal) {
-                closeEditModal();
-            }
+            if (event.target === modal) closeEditModal();
         }
 
         render();
